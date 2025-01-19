@@ -31,4 +31,4 @@ To use this CloudFormation template, follow these steps:
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/rosa-cloudformation-template.git
+https://github.com/joshuaombasa/rosa-cloudformation-template/tree/main
