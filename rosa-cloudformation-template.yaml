@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template to deploy a Red Hat OpenShift Service on AWS (ROSA) cluster."
+
+Parameters:
+  ClusterName:
+    Type: String
+    Default: "my-rosa-cluster"
+    Description: "The name of the OpenShift cluster."
+
+  ClusterVersion:
+    Type: String
+    Default: "4.12.0"
+    Description: "OpenShift version to deploy."
+
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block for the VPC."
+
+  Subnet1Cidr:
+    Type: String
+    Default: "10.0.1.0/24"
+    Description: "CIDR block for Subnet 1."
+
+  Subnet2Cidr:
+    Type: String
+    Default: "10.0.2.0/24"
+    Description: "CIDR block for Subnet 2."
+
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${ClusterName}-VPC"
+
+  Subnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet1Cidr
+      AvailabilityZone: !Select [ 0, !GetAZs "" ]
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${ClusterName}-Subnet1"
+
+  Subnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref Subnet2Cidr
+      AvailabilityZone: !Select [ 1, !GetAZs "" ]
+      Tags:
+        - Key: "Name"
+          Value: !Sub "${ClusterName}-Subnet2"
+
+  ROSAClusterRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "rosa.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSServiceRoleForROSA"
+
+  OpenShiftCluster:
+    Type: "AWS::ROSA::Cluster"
+    Properties:
+      Name: !Ref ClusterName
+      RoleArn: !GetAtt ROSAClusterRole.Arn
+      Version: !Ref ClusterVersion
+      Network:
+        VpcId: !Ref VPC
+        SubnetIds:
+          - !Ref Subnet1
+          - !Ref Subnet2
+
+Outputs:
+  ClusterName:
+    Value: !Ref OpenShiftCluster
+    Description: "The name of the OpenShift cluster."
+
+  ClusterRoleArn:
+    Value: !GetAtt ROSAClusterRole.Arn
+    Description: "IAM Role ARN for the OpenShift cluster."
